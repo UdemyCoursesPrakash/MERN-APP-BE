@@ -1,54 +1,87 @@
 const uuid = require("uuid").v4;
 const { validationResult } = require("express-validator");
-const users = require("../dummyData/users").users;
-const HttpError = require("../models/http-error");
 
-const getUsers = (req, res, next) => {
+const HttpError = require("../models/http-error");
+const User = require("../models/user");
+
+const getUsers = async (req, res, next) => {
+  let users;
+  try {
+    users = await User.find({}, "-password");
+  } catch (error) {
+    const err = new HttpError("Fetching users failed , please try later", 500);
+    return next(err);
+  }
+
   res.json({
-    data: users,
+    users: users.map((user) => user.toObject({ getters: true })),
   });
 };
 
-const signup = (req, res, next) => {
+const signup = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     let error = errors.array()[0].msg;
-    throw new HttpError(error, 422);
+    return next(new HttpError(error, 422));
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, password, places } = req.body;
 
-  const hashUser = users.find((user) => user.email == email);
-  if (hashUser) {
-    throw new HttpError("Could not create user, email already exists", 422);
+  let existingUser;
+  try {
+    existingUser = await User.findOne({ email: email });
+  } catch (error) {
+    const err = new HttpError("Signup failsed , plese try later", 500);
+    next(err);
   }
 
-  const createdUser = {
-    id: uuid(),
+  if (existingUser) {
+    const err = new HttpError(
+      "User exists already , please login instead",
+      422
+    );
+    return next(err);
+  }
+
+  const createdUser = new User({
     name,
     email,
     password,
-  };
-
-  users.push(createdUser);
-
-  res.status(201).json({ user: createdUser });
-};
-
-const login = (req, res, next) => {
-  const { email, password } = req.body;
-
-  const identifiedUser = users.find((user) => {
-    return user.email === email;
+    image: "dummy image url",
+    places: [],
   });
 
-  if (!identifiedUser || identifiedUser.password != password) {
-    const error = new HttpError(
-      "Could not identify user , credential seems to be wrong",
+  try {
+    await createdUser.save();
+  } catch (error) {
+    const err = new HttpError(
+      "Failed while sigining up , please login instead",
+      500
+    );
+    return next(err);
+  }
+
+  res.status(201).json({ user: createdUser.toObject({ getters: true }) }); // {getters : true} this removes the underscore infront of id property ==> _id ==> id
+};
+
+const login = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  let existingUser;
+  try {
+    existingUser = await User.findOne({ email: email });
+  } catch (error) {
+    const err = new HttpError("Login failed , plese try later", 500);
+    next(err);
+  }
+
+  if (!existingUser || existingUser.password != password) {
+    const err = new HttpError(
+      "Invalid credentials, could not let log oyu in",
       401
     );
-    throw error;
+    return next(err);
   }
 
   res.json({ message: "Logged In" });

@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 
 const places = require("./dummyData/places");
 const HttpError = require("./models/http-error");
@@ -28,4 +29,16 @@ app.use((error, req, res, next) => {
   res.json({ message: error.message || "Internal server error" });
 });
 
-app.listen(5000);
+mongoose
+  .connect(
+    "mongodb+srv://Prakash:Password123@cluster0.irpmm.mongodb.net/MERN-PLACES?retryWrites=true&w=majority",
+    { useNewUrlParser: true, useUnifiedTopology: true }
+  )
+  .then((res) => {
+    console.log("connected to mongoose");
+    // console.log(res);
+    app.listen(5000);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
