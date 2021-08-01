@@ -1,5 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const fs = require('fs');
+const path = require('path');
 
 const places = require("./dummyData/places");
 const HttpError = require("./models/http-error");
@@ -9,6 +11,14 @@ const usersRoutes = require("./routes/users-routes");
 
 const app = express();
 app.use(express.json());
+app.use('/uploads/images', express.static(path.join('uploads', 'images')))
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Allows any domain to send request
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, PUT");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  next(); // this next() is important here , otherwise request will not go to next middleware.
+});
 
 app.use("/api/places", placesRoutes); // /api/places/....
 app.use("/api/users", usersRoutes);
@@ -20,6 +30,14 @@ app.use((req, res, next) => {
 
 app.use((error, req, res, next) => {
   // this will only excutes if there is any error thrown by any middleware above
+
+  if (req.file) {
+    // this will execute for a request which has a file in that request. Multer adds file object in request if it has a file
+    fs.unlink(req.file.path, err => {
+      console.log(err);
+    })
+  }
+
   if (res.headerSent) {
     // check if response has already been sent. If that is the case we just return from here
     return next(error);

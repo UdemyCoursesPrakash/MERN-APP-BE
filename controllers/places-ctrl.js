@@ -1,6 +1,7 @@
 const uuid = require("uuid");
 const { validationResult } = require("express-validator");
 const mongoose = require("mongoose");
+const fs = require('fs');
 
 const HttpError = require("../models/http-error");
 const Place = require("../models/place");
@@ -47,7 +48,7 @@ const getPlaceByUserId = async (req, res, next) => {
   }
 
   //if(!places.length)
-  if (!userWithPlaces || !userWithPlaces.places.length) {
+  if (!userWithPlaces || !userWithPlaces.places) {
     const error = new HttpError(
       "Could not find a places for the given user id",
       404
@@ -67,21 +68,25 @@ const getPlaceByUserId = async (req, res, next) => {
 
 const createPlace = async (req, res, next) => {
   const errors = validationResult(req);
-
+  console.log(errors.array());
   if (!errors.isEmpty()) {
     let error = errors.array()[0];
     console.log(error.msg);
     throw new HttpError(error.msg, 422);
   }
 
-  const { title, description, coordinates, address, creator } = req.body;
-  const placeId = "p" + places.length; // uuid() ==> this will generate dynamic id for us
+  const { title, description, address, creator } = req.body;
+  // const placeId = "p" + places.length; // uuid() ==> this will generate dynamic id for us
+  const coordinates = {
+    lat: 18.9388528,
+    lng: 72.8235753
+  };
   const createdPlace = new Place({
     title,
     description,
     address,
     location: coordinates,
-    image: "dummy url",
+    image: req.file.path,
     creator,
   });
 
@@ -98,7 +103,6 @@ const createPlace = async (req, res, next) => {
     const err = new HttpError("We could not find user for provided id", 404);
     return next(err);
   }
-
   try {
     // await createdPlace.save(); // If we want to save only this created place this this code is ok
 
@@ -137,7 +141,6 @@ const updatePlace = async (req, res, next) => {
 
   const placeId = req.params.placeId;
   const { title, description } = req.body;
-
   let placeToUpdate;
   try {
     placeToUpdate = await Place.findById(placeId);
@@ -182,6 +185,8 @@ const deletePlace = async (req, res, next) => {
     return next(err);
   }
 
+  const imagePath = place.image;
+
   try {
     // await place.remove();
 
@@ -205,7 +210,9 @@ const deletePlace = async (req, res, next) => {
     );
     return next(err);
   }
-
+  fs.unlink(imagePath, err => {
+    console.log(err);
+  })
   res.json({ message: "Place deleted succefully" });
 };
 

@@ -1,5 +1,5 @@
 const express = require("express");
-
+const fileUpload = require("../middlewares/file-upload");
 const { check } = require("express-validator");
 
 const placesController = require("../controllers/places-ctrl");
@@ -12,6 +12,7 @@ routes.get("/user/:userId", placesController.getPlaceByUserId);
 
 routes.post(
   "/",
+  fileUpload.single('image'),
   [
     check("title").notEmpty().withMessage("Title is required"),
     check("description")

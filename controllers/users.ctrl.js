@@ -32,8 +32,9 @@ const signup = async (req, res, next) => {
   try {
     existingUser = await User.findOne({ email: email });
   } catch (error) {
-    const err = new HttpError("Signup failsed , plese try later", 500);
-    next(err);
+    console.log(error);
+    const err = new HttpError("Signup failed , plese try later", 500);
+    return next(err);
   }
 
   if (existingUser) {
@@ -48,7 +49,7 @@ const signup = async (req, res, next) => {
     name,
     email,
     password,
-    image: "dummy image url",
+    image: req.file.path,
     places: [],
   });
 
@@ -84,7 +85,7 @@ const login = async (req, res, next) => {
     return next(err);
   }
 
-  res.json({ message: "Logged In" });
+  res.json({ message: "Logged In", user: existingUser.toObject({ getters: true }) });
 };
 
 module.exports = {
