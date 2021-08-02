@@ -87,13 +87,13 @@ const createPlace = async (req, res, next) => {
     address,
     location: coordinates,
     image: req.file.path,
-    creator,
+    creator: req.userData.userId,  // we are storing this id in request in auth middleware
   });
 
   let user;
 
   try {
-    user = await User.findById(creator);
+    user = await User.findById(req.userData.userId);
   } catch (error) {
     const err = new HttpError("Creating place failed , please try again", 500);
     return next(err);
